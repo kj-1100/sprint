@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:sprint/model/budget_item_model.dart';
 import 'package:sprint/model/text_field.dart';
+import 'package:flutter_masked_text2/flutter_masked_text2.dart';
 
 class BudgetDetailPage extends StatefulWidget {
   final String budgetName;
@@ -25,15 +26,25 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
       FirebaseFirestore.instance.collection('budgets');
   final ImagePicker _picker = ImagePicker();
   int? _editingIndex;
+  double totalPrice = 0.0;
 
   // Controladores de Texto
   final TextEditingController _itemController = TextEditingController();
-  final TextEditingController _priceController = TextEditingController();
   final TextEditingController _supplierController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _imageLinkController = TextEditingController();
+  final MoneyMaskedTextController _priceController = MoneyMaskedTextController(
+    decimalSeparator: ',',
+    thousandSeparator: '.',
+    leftSymbol: 'R\$ ',
+  );
 
   Uint8List? _selectedImageBytes;
+  @override
+  void initState() {
+    super.initState();
+    _calculateTotalPrice();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +81,9 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
                   itemBuilder: (context, index) {
                     return BudgetItemModel(
                       item: items[index],
-                      delete: () {_deleteItem(index);},
+                      delete: () {
+                        _deleteItem(index);
+                      },
                       editar: () {
                         _editItem(index, items[index]);
                       },
@@ -82,15 +95,23 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
           ),
         ],
       ),
+      bottomSheet: Container(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+    'Valor total do orçamento: R\$ ${totalPrice.toStringAsFixed(2).replaceAll(".", ",")}',
+    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    textAlign: TextAlign.center,
+  ),
+      ),
     );
   }
 
   void _editItem(int index, dynamic item) {
-    _itemController.text = item['name'];
-    _priceController.text = item['price'];
-    _supplierController.text = item['supplier'];
-    _descriptionController.text = item['description'];
-    _imageLinkController.text = item['image'];
+    _itemController.text = item['name']?.toString() ?? '';
+    _priceController.text = item['price']?.toString() ?? '';
+    _supplierController.text = item['supplier']?.toString() ?? '';
+    _descriptionController.text = item['description']?.toString() ?? '';
+    _imageLinkController.text = item['image']?.toString() ?? '';
 
     _editingIndex = index;
     _showMyDialog(context);
@@ -170,6 +191,12 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
         print("❌ Erro: Orçamento não encontrado.");
         return;
       }
+      num? priceValue = _priceController.numberValue;
+
+      if (priceValue == 0) {
+        _showSnackbar("Preço inválido. Digite um número válido.");
+        return;
+      }
 
       var budget = doc.data() as Map<String, dynamic>;
       List<dynamic> items = budget['items'] ?? [];
@@ -183,7 +210,7 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
               ? _itemController.text.trim()
               : oldItem['name'],
           'price': _priceController.text.trim().isNotEmpty
-              ? _priceController.text.trim()
+              ? priceValue
               : oldItem['price'],
           'supplier': _supplierController.text.trim().isNotEmpty
               ? _supplierController.text.trim()
@@ -202,7 +229,7 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
         // Criando um novo item
         var newItem = {
           'name': _itemController.text.trim(),
-          'price': _priceController.text.trim(),
+          'price': priceValue,
           'supplier': _supplierController.text.trim(),
           'description': _descriptionController.text.trim(),
           'image': imageUrl ?? '',
@@ -213,7 +240,7 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
 
       await budgetsCollection.doc(widget.budgetId).update({'items': items});
       print("✅ Item adicionado com sucesso!");
-
+      _calculateTotalPrice();
       _clearFields();
     } catch (e) {
       print("❌ Erro ao adicionar item: $e");
@@ -306,10 +333,11 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
                           hintText: 'Exemplo: Placa de Vídeo'),
                       const SizedBox(height: 12),
                       CustomTextField(
-                          controller: _priceController,
-                          labelText: 'Preço',
-                          hintText: 'Digite o preço',
-                          keyboardType: TextInputType.number),
+                        controller: _priceController,
+                        labelText: 'Preço',
+                        hintText: 'Digite o preço',
+                        keyboardType: TextInputType.number,
+                      ),
                       const SizedBox(height: 12),
                       CustomTextField(
                           controller: _supplierController,
@@ -387,40 +415,64 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
       },
     );
   }
+
   void _deleteItem(int index) async {
-  bool confirm = await _showConfirmationDialog();
-  if (!confirm) return;
+    bool confirm = await _showConfirmationDialog();
+    if (!confirm) return;
 
-  var doc = await budgetsCollection.doc(widget.budgetId).get();
-  if (!doc.exists) return;
+    var doc = await budgetsCollection.doc(widget.budgetId).get();
+    if (!doc.exists) return;
 
-  var budget = doc.data() as Map<String, dynamic>;
-  List<dynamic> items = budget['items'] ?? [];
+    var budget = doc.data() as Map<String, dynamic>;
+    List<dynamic> items = budget['items'] ?? [];
 
-  items.removeAt(index);
-  await budgetsCollection.doc(widget.budgetId).update({'items': items});
-  print("🗑️ Item deletado!");
-}
+    items.removeAt(index);
+    await budgetsCollection.doc(widget.budgetId).update({'items': items});
+    _calculateTotalPrice();
+    print("🗑️ Item deletado!");
+  }
 
-Future<bool> _showConfirmationDialog() async {
-  return await showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text("Confirmar Exclusão"),
-        content: const Text("Tem certeza de que deseja excluir este item?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text("Cancelar"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text("Excluir", style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      );
-    },
-  ) ?? false;
-}
+  Future<bool> _showConfirmationDialog() async {
+    return await showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text("Confirmar Exclusão"),
+              content:
+                  const Text("Tem certeza de que deseja excluir este item?"),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text("Cancelar"),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text("Excluir",
+                      style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+  }
+
+  Future<void> _calculateTotalPrice() async {
+    var doc = await budgetsCollection.doc(widget.budgetId).get();
+    if (!doc.exists) return;
+
+    var budget = doc.data() as Map<String, dynamic>;
+    List<dynamic> items = budget['items'] ?? [];
+
+    double total = 0.0;
+    for (var item in items) {
+      if (item['price'] is num) {
+        total += (item['price'] as num).toDouble();
+      }
+    }
+
+    setState(() {
+      totalPrice = total;
+    });
+  }
 }

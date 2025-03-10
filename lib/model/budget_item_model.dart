@@ -43,13 +43,15 @@ class _BudgetItemModelState extends State<BudgetItemModel> {
               Row(
                 children: [
                   // Imagem pequena com sombra
-                  widget.item['image'] != null && widget.item['image']!.isNotEmpty
+                  widget.item['image'] != null &&
+                          widget.item['image']!.isNotEmpty
                       ? Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
+                                color:
+                                    Colors.black.withAlpha((255 * 0.2).toInt()),
                                 blurRadius: 6,
                                 offset: const Offset(3, 3),
                               ),
@@ -72,7 +74,8 @@ class _BudgetItemModelState extends State<BudgetItemModel> {
                             color: Colors.grey[300],
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.image_not_supported, size: 40, color: Colors.grey),
+                          child: const Icon(Icons.image_not_supported,
+                              size: 40, color: Colors.grey),
                         ),
 
                   const SizedBox(width: 12),
@@ -92,7 +95,7 @@ class _BudgetItemModelState extends State<BudgetItemModel> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Preço: ${widget.item['price']}',
+                          'Valor total do orçamento: R\$ ${widget.item['price'].toStringAsFixed(2).replaceAll(".", ",")}',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -102,11 +105,26 @@ class _BudgetItemModelState extends State<BudgetItemModel> {
                       ],
                     ),
                   ),
-
+                  if (!_isExpanded)
+                    IconButton(
+                      onPressed: widget.editar,
+                      icon: Icon(
+                        Icons.edit,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  if (!_isExpanded)
+                    IconButton(
+                      onPressed: widget.delete,
+                      icon:  Icon(Icons.delete,
+                          color: Theme.of(context).colorScheme.primary),
+                    ),
                   // Ícone de expansão
                   Icon(
                     _isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.white,
+                    color: _isExpanded
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.white,
                     size: 30,
                   ),
                 ],
@@ -124,30 +142,38 @@ class _BudgetItemModelState extends State<BudgetItemModel> {
                       // Fornecedor
                       Text(
                         "Fornecedor: ${widget.item['supplier'] ?? 'Não informado'}",
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 14),
                       ),
                       const SizedBox(height: 8),
 
                       // Descrição
                       Text(
                         "Descrição:",
-                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        widget.item['description'] ?? 'Sem descrição disponível',
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        widget.item['description'] ??
+                            'Sem descrição disponível',
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 14),
                       ),
                       const SizedBox(height: 8),
 
                       // Imagem em tamanho maior
-                      if (widget.item['image'] != null && widget.item['image']!.isNotEmpty)
+                      if (widget.item['image'] != null &&
+                          widget.item['image']!.isNotEmpty)
                         Center(
-                          child: Container(constraints: BoxConstraints(maxHeight: 500,maxWidth: 500),
+                          child: Container(
+                            constraints:
+                                BoxConstraints(maxHeight: 500, maxWidth: 500),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(12),
                               child: Image.network(
                                 widget.item['image'],
-                                
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -163,12 +189,14 @@ class _BudgetItemModelState extends State<BudgetItemModel> {
                           TextButton.icon(
                             onPressed: widget.editar,
                             icon: const Icon(Icons.edit, color: Colors.blue),
-                            label: const Text("Editar", style: TextStyle(color: Colors.blue)),
+                            label: const Text("Editar",
+                                style: TextStyle(color: Colors.blue)),
                           ),
                           TextButton.icon(
                             onPressed: widget.delete,
                             icon: const Icon(Icons.delete, color: Colors.red),
-                            label: const Text("Excluir", style: TextStyle(color: Colors.red)),
+                            label: const Text("Excluir",
+                                style: TextStyle(color: Colors.red)),
                           ),
                         ],
                       ),
