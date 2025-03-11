@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sprint/home/home_page_large.dart';
-import 'package:sprint/home/home_page_small';
+import 'package:sprint/home/home_page_small.dart';
 
 class Principal extends StatefulWidget {
   const Principal({super.key});
