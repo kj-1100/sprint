@@ -4,13 +4,13 @@ import 'package:multi_split_view/multi_split_view.dart';
 import 'package:sprint/home/budgets/budget_detail_page.dart';
 import 'package:sprint/home/budgets/budget_page.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class HomePageLarge extends StatefulWidget {
+  const HomePageLarge({super.key});
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<HomePageLarge> createState() => _HomePageLargeState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageLargeState extends State<HomePageLarge> {
   final _multiViewController = MultiSplitViewController(
       areas: [Area(size: 300, min: 0.1), Area(min: 500)]);
   User? _usuario;

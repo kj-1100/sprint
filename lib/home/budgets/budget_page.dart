@@ -91,6 +91,29 @@ class _BudgetPageState extends State<BudgetPage> {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
+          if (!snapshot.hasData || snapshot.data == null) {
+            if (MediaQuery.of(context).size.width < 600) {
+              return Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Abra o menu e selecione um orçamento',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 18),
+                    ),
+                    Icon(Icons.menu)
+                  ],
+                ),
+              );
+
+              // Celular
+            } else {
+              return Center(
+                child: Text('Selecione um orçamento'),
+              );
+            }
+          }
           var budgets = snapshot.data!.docs;
           return ListView.builder(
             itemCount: budgets.length,

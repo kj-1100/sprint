@@ -6,13 +6,14 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:sprint/alerts/snackbar.dart';
 import 'package:sprint/model/budget_item_model.dart';
 import 'package:sprint/model/text_field.dart';
 import 'package:flutter_masked_text2/flutter_masked_text2.dart';
 
 class BudgetDetailPage extends StatefulWidget {
   final String budgetName;
-  final String budgetId;
+  final String? budgetId;
   const BudgetDetailPage(
       {super.key, required this.budgetId, required this.budgetName});
 
@@ -21,6 +22,7 @@ class BudgetDetailPage extends StatefulWidget {
 }
 
 class _BudgetDetailPageState extends State<BudgetDetailPage> {
+  bool isLoading = true;
   late bool isValid;
   final CollectionReference budgetsCollection =
       FirebaseFirestore.instance.collection('budgets');
@@ -48,6 +50,39 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: budgetsCollection.doc(widget.budgetId).snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          if (!isLoading) {
+            return buildBudgetId(context, snapshot.data!);
+          }
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          ); // Mostra um carregamento antes de decidir qual tela exibir
+        }
+
+        // Se não houver dados ou o orçamento foi excluído, exibe a tela vazia
+        if (!snapshot.hasData ||
+            snapshot.data == null ||
+            !snapshot.data!.exists) {
+          return buildBudgetIdIsEmpty(context);
+        }
+
+        // Se os dados existem, exibe a tela do orçamento
+        return buildBudgetId(context, snapshot.data!);
+      },
+    );
+  }
+
+  /// Tela de orçamento válido
+  Widget buildBudgetId(BuildContext context, DocumentSnapshot snapshot) {
+    isLoading = false;
+    var budget = snapshot.data() as Map<String, dynamic>;
+    var items = budget['items'] as List<dynamic>? ?? [];
+    double totalPrice =
+        items.fold(0, (total, item) => total + (item['price'] ?? 0));
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Detalhes de(a) ${widget.budgetName}'),
@@ -58,36 +93,22 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
             },
             child: const Text('Adicionar Item'),
           ),
-          SizedBox(
-            width: 10,
-          )
+          const SizedBox(width: 10),
         ],
       ),
       body: Column(
         children: [
           Expanded(
-            child: StreamBuilder<DocumentSnapshot>(
-              stream: budgetsCollection.doc(widget.budgetId).snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                var budget = snapshot.data!.data() as Map<String, dynamic>;
-                var items = budget['items'] as List<dynamic>? ?? [];
-
-                return ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    return BudgetItemModel(
-                      item: items[index],
-                      delete: () {
-                        _deleteItem(index);
-                      },
-                      editar: () {
-                        _editItem(index, items[index]);
-                      },
-                    );
+            child: ListView.builder(
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                return BudgetItemModel(
+                  item: items[index],
+                  delete: () {
+                    _deleteItem(index);
+                  },
+                  editar: () {
+                    _editItem(index, items[index]);
                   },
                 );
               },
@@ -98,14 +119,58 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
       bottomSheet: Container(
         padding: const EdgeInsets.all(16),
         child: Text(
-    'Valor total do orçamento: R\$ ${totalPrice.toStringAsFixed(2).replaceAll(".", ",")}',
-    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-    textAlign: TextAlign.center,
-  ),
+          'Valor total do orçamento: R\$ ${totalPrice.toStringAsFixed(2).replaceAll(".", ",")}',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }
 
+  /// Tela para quando o orçamento não for encontrado
+  Widget buildBudgetIdIsEmpty(BuildContext context) {
+    if (MediaQuery.of(context).size.width < 600) {
+      return Center(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Abra o menu e selecione um orçamento',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18),
+            ),
+            Icon(Icons.menu)
+          ],
+        ),
+      );
+
+      // Celular
+    } else {
+      return Center(
+        child: Text('Selecione um orçamento'),
+      );
+    }
+  }
+
+  void _showSnackbar(String message) {
+    final overlay = Overlay.of(context);
+
+    final overlayEntry = OverlayEntry(
+      builder: (context) => OverlaySnackbar(
+        message: message,
+        color: Colors.red,
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+
+    // Remove a Snackbar após 3 segundos
+    Future.delayed(const Duration(seconds: 3), () {
+      overlayEntry.remove();
+    });
+  }
+
+  ///prepara controlers para edição
   void _editItem(int index, dynamic item) {
     _itemController.text = item['name']?.toString() ?? '';
     _priceController.text = item['price']?.toString() ?? '';
@@ -239,7 +304,7 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
       }
 
       await budgetsCollection.doc(widget.budgetId).update({'items': items});
-      print("✅ Item adicionado com sucesso!");
+      _navegationPop();
       _calculateTotalPrice();
       _clearFields();
     } catch (e) {
@@ -247,15 +312,9 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
     }
   }
 
-  /// Método para exibir uma Snackbar
-  void _showSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+  /// Nagation que não pode aconcer dentro de metodos async.
+  void _navegationPop() {
+    Navigator.of(context).pop();
   }
 
   /// Método para limpar os campos do formulário após salvar
@@ -416,6 +475,7 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
     );
   }
 
+  ///deleta item
   void _deleteItem(int index) async {
     bool confirm = await _showConfirmationDialog();
     if (!confirm) return;
@@ -432,6 +492,7 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
     print("🗑️ Item deletado!");
   }
 
+  ///popup confirnmação
   Future<bool> _showConfirmationDialog() async {
     return await showDialog(
           context: context,
@@ -457,6 +518,7 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
         false;
   }
 
+  /// calcula o preço total do orçamento
   Future<void> _calculateTotalPrice() async {
     var doc = await budgetsCollection.doc(widget.budgetId).get();
     if (!doc.exists) return;

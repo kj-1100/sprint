@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sprint/model/text_field.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -33,7 +34,7 @@ class _RegisterPageState extends State<RegisterPage> {
       );
       // Usuário criado e autenticado com sucesso - vai para Home
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacementNamed(context, '/principal');
       }
     } on FirebaseAuthException catch (e) {
       setState(() {
@@ -62,15 +63,15 @@ class _RegisterPageState extends State<RegisterPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
+              CustomTextField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
+                labelText: 'Email',
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
-              TextField(
+              CustomTextField(
                 controller: _senhaController,
-                decoration: const InputDecoration(labelText: 'Senha'),
+                labelText: 'Senha',
                 obscureText: true,
               ),
               const SizedBox(height: 24),

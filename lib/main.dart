@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sprint/firebase_options.dart';
-import 'package:sprint/home/home_page.dart';
 import 'package:sprint/login_or_register/login_page.dart';
 import 'package:sprint/login_or_register/register_page.dart';
+import 'package:sprint/principal.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +15,7 @@ Future<void> main() async {
   // Define a rota inicial com base no login persistido
   String initialRoute;
   if (usuarioAtual != null) {
-    initialRoute = '/home';
+    initialRoute = '/principal';
   } else {
     initialRoute = '/login';
   }
@@ -37,7 +37,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
-        '/home': (context) => const HomePage(),
+        '/principal': (context) => const Principal(),
       },
       // Podemos definir a tela de login como rota padrão para qualquer rota desconhecida:
       onUnknownRoute: (settings) =>

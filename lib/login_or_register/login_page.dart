@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sprint/model/text_field.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -34,7 +35,7 @@ class _LoginPageState extends State<LoginPage> {
       );
       // Navega para Home e remove esta página do stack de navegação
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacementNamed(context, '/principal');
       }
     } on FirebaseAuthException catch (e) {
       // Captura erros de autenticação (ex: usuário não encontrado, senha incorreta)
@@ -65,16 +66,15 @@ class _LoginPageState extends State<LoginPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Campo de Email
-              TextField(
+              CustomTextField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
+                labelText: 'Email',
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
-              // Campo de Senha
-              TextField(
+              CustomTextField(
                 controller: _senhaController,
-                decoration: const InputDecoration(labelText: 'Senha'),
+                labelText: 'Senha',
                 obscureText: true,
               ),
               const SizedBox(height: 24),
