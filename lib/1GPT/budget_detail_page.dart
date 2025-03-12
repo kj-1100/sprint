@@ -22,21 +22,15 @@ class BudgetDetailPage extends StatefulWidget {
 }
 
 class _BudgetDetailPageState extends State<BudgetDetailPage> {
-  bool search = false;
-  int? _editingIndex;
-  double totalPrice = 0.0;
-  String _sortBy = 'name'; // Opções: 'name' ou 'price'
-  String _searchQuery = "";
-  bool _ascending = true;
   bool isLoading = true;
   late bool isValid;
-
   final CollectionReference budgetsCollection =
       FirebaseFirestore.instance.collection('budgets');
   final ImagePicker _picker = ImagePicker();
+  int? _editingIndex;
+  double totalPrice = 0.0;
 
   // Controladores de Texto
-  final TextEditingController _searchController = TextEditingController();
   final TextEditingController _itemController = TextEditingController();
   final TextEditingController _supplierController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -61,9 +55,7 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           if (!isLoading) {
-            var budget = snapshot.data!.data() as Map<String, dynamic>;
-            var items = List<Map<String, dynamic>>.from(budget['items'] ?? []);
-            return buildBudgetId(context, items);
+            return buildBudgetId(context, snapshot.data!);
           }
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -76,72 +68,24 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
             !snapshot.data!.exists) {
           return buildBudgetIdIsEmpty(context);
         }
-        var budget = snapshot.data!.data() as Map<String, dynamic>;
-        var items = List<Map<String, dynamic>>.from(budget['items'] ?? []);
 
-        items.sort((a, b) {
-          if (_sortBy == 'price') {
-            return _ascending
-                ? (a['price'] as num).compareTo(b['price'] as num)
-                : (b['price'] as num).compareTo(a['price'] as num);
-          } else {
-            return _ascending
-                ? (a['name'] as String).compareTo(b['name'] as String)
-                : (b['name'] as String).compareTo(a['name'] as String);
-          }
-        });
         // Se os dados existem, exibe a tela do orçamento
-        return buildBudgetId(context, items);
+        return buildBudgetId(context, snapshot.data!);
       },
     );
   }
 
   /// Tela de orçamento válido
-  Widget buildBudgetId(BuildContext context, List<Map<String, dynamic>> items) {
+  Widget buildBudgetId(BuildContext context, DocumentSnapshot snapshot) {
     isLoading = false;
-
+    var budget = snapshot.data() as Map<String, dynamic>;
+    var items = budget['items'] as List<dynamic>? ?? [];
     double totalPrice =
         items.fold(0, (total, item) => total + (item['price'] ?? 0));
-    items = items
-        .where((item) =>
-            item['name'].toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Detalhes de(a) ${widget.budgetName}'),
-        bottom: search
-            ? PreferredSize(
-                preferredSize: const Size.fromHeight(50.0),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) {
-                      setState(() {
-                        _searchQuery = value;
-                      });
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'Buscar itens...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: GestureDetector(
-                        child: const Icon(Icons.close),
-                        onTap: () {
-                          setState(() {
-                            _searchQuery = "";
-                            _searchController.clear();
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              )
-            : null,
         actions: [
           ElevatedButton(
             onPressed: () {
@@ -150,51 +94,6 @@ class _BudgetDetailPageState extends State<BudgetDetailPage> {
             child: const Text('Adicionar Item'),
           ),
           const SizedBox(width: 10),
-          IconButton(
-            onPressed: () {
-              setState(() {
-                search = !search;
-                if (!search) {
-                  setState(() {
-                    _searchQuery = "";
-                    _searchController.clear();
-                  });
-                }
-              });
-            },
-            icon: Icon(search ? Icons.close : Icons.search),
-          ),const SizedBox(width: 5),
-          PopupMenuButton<String>(
-            icon: Icon(Icons.swap_vert),
-            onSelected: (value) {
-              setState(() {
-                if (value == 'invert') {
-                  _ascending = !_ascending;
-                } else {
-                  if (value == _sortBy) {
-                    _ascending = !_ascending;
-                  } else {
-                    _sortBy = value;
-                    _ascending = true;
-                  }
-                }
-              });
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'name',
-                child: Text('Ordenar por Nome'),
-              ),
-              const PopupMenuItem(
-                value: 'price',
-                child: Text('Ordenar por Preço'),
-              ),
-              const PopupMenuItem(
-                value: 'invert',
-                child: Text('Inverter Ordem'),
-              ),
-            ],
-          ),
         ],
       ),
       body: Column(

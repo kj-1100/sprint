@@ -12,7 +12,7 @@ class HomePageLarge extends StatefulWidget {
 
 class _HomePageLargeState extends State<HomePageLarge> {
   final _multiViewController = MultiSplitViewController(
-      areas: [Area(size: 350, min: 0.1), Area(min: 300,)]);
+      areas: [Area(size: 300, min: 0.1), Area(min: 500)]);
   User? _usuario;
   String? _selectedBudgetId;
   String? _selectedBudgetName;

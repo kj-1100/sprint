@@ -5,7 +5,8 @@ class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
   final String labelText;
-  final IconData? prefixIcon;
+  final Widget?suffixIcon;
+  final Widget? prefixIcon;
   final bool obscureText;
   final TextInputType keyboardType;
   final int maxLines;
@@ -34,7 +35,7 @@ class CustomTextField extends StatelessWidget {
     this.backgroundColor = Colors.transparent,
 
     this.textAlign = TextAlign.start,
-    this.textInputAction = TextInputAction.done,
+    this.textInputAction = TextInputAction.done, this.suffixIcon,
   });
 
   @override
@@ -50,10 +51,10 @@ class CustomTextField extends StatelessWidget {
       textAlign: textAlign,
       textInputAction: textInputAction,
 
-      decoration: InputDecoration(
+      decoration: InputDecoration(suffixIcon: suffixIcon,
         hintText: hintText,
         labelText: labelText,
-        prefixIcon: prefixIcon != null ? Icon(prefixIcon, ) : null,
+        prefixIcon: prefixIcon,
         filled: true,
         fillColor: backgroundColor,
         border: OutlineInputBorder(

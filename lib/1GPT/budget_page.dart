@@ -12,14 +12,10 @@ class BudgetPage extends StatefulWidget {
 
 class _BudgetPageState extends State<BudgetPage> {
   final TextEditingController _budgetController = TextEditingController();
-  final TextEditingController _searchController = TextEditingController();
-  bool search = false;
-  String _searchQuery = "";
-
   final CollectionReference budgetsCollection =
       FirebaseFirestore.instance.collection('budgets');
   String? _selectedBudgetId;
-  bool _ascending = true;
+
   Future<void> _createBudget() async {
     if (_budgetController.text.isNotEmpty) {
       await budgetsCollection
@@ -80,62 +76,7 @@ class _BudgetPageState extends State<BudgetPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gestão de Orçamentos'),
-        bottom: search
-            ? PreferredSize(
-                preferredSize: const Size.fromHeight(50.0),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) {
-                      setState(() {
-                        _searchQuery = value;
-                      });
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'Buscar itens...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: GestureDetector(
-                        child: const Icon(Icons.close),
-                        onTap: () {
-                          setState(() {
-                            _searchQuery = "";
-                            _searchController.clear();
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              )
-            : null,
         actions: [
-          IconButton(
-            onPressed: () {
-              setState(() {
-                search = !search;
-                if (!search) {
-                  setState(() {
-                    _searchQuery = "";
-                    _searchController.clear();
-                  });
-                }
-              });
-            },
-            icon: Icon(search ? Icons.close : Icons.search),
-          ),
-          IconButton(
-            onPressed: () {
-              setState(() {
-                _ascending = !_ascending;
-              });
-            },
-            icon: const Icon(Icons.swap_vert),
-          ),
           IconButton(
             onPressed: () {
               _showMyDialog(context, isEditing: false);
@@ -174,17 +115,6 @@ class _BudgetPageState extends State<BudgetPage> {
             }
           }
           var budgets = snapshot.data!.docs;
-          budgets = budgets
-              .where((item) => item['name']
-                  .toLowerCase()
-                  .contains(_searchQuery.toLowerCase()))
-              .toList();
-          budgets.sort((a, b) {
-            return _ascending
-                ? (a['name'] as String).compareTo(b['name'] as String)
-                : (b['name'] as String).compareTo(a['name'] as String);
-          });
-
           return ListView.builder(
             itemCount: budgets.length,
             itemBuilder: (context, index) {
